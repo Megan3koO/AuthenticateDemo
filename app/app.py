@@ -8,6 +8,7 @@ class App(tk.Tk):
         self.login_token = None
         self.username = None
         self.api_timeout = 5  # minutes
+        #self.geometry("500x400")
         self.container = tk.Frame(self)
         self.container.pack(fill=tk.BOTH, expand=True)
 
@@ -15,6 +16,7 @@ class App(tk.Tk):
         for F in (MainWindow, LoginWindow, ApiWindow):
             frame = F(master=self.container, controller=self) #init custom frame
             self.frames[F.__name__] = frame #add frame to the dictionary
+            #frame.config(bg='white')  # Set background color for each frame
             frame.grid(row=0, column=0, sticky="nsew")
         
         self.show_frame(MainWindow)
@@ -28,6 +30,7 @@ class App(tk.Tk):
             frame.set_login_token(self.login_token)
             frame.set_username(self.username)
             self.after(60 * 1000 * self.api_timeout, lambda: self.redirect_to_main)  # Auto-redirect after 5 minutes
+        frame.refresh()
         frame.tkraise()
 
     def redirect_to_main(self):

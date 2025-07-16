@@ -1,6 +1,10 @@
 const jwt = require('jsonwebtoken');
 
-const SECRET = "123456"; // Store in env in real apps
+const JWT_SECRET = require('../models/secrets').JWT_KEY; // Store in env in real apps
+
+function authenticateUser(req, res, next) {
+  // should be used to authenticate password and username
+};
 
 // Middleware to verify token
 function authenticateToken(req, res, next) {
@@ -9,7 +13,7 @@ function authenticateToken(req, res, next) {
   const token = authHeader?.split(' ')[1];
 
   if (!token) return res.sendStatus(401);
-  jwt.verify(token, SECRET, (err, id) => {
+  jwt.verify(token, JWT_SECRET, (err, id) => {
     if (err)
     {
       console.error('Token verification failed:', err.message);

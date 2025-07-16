@@ -12,3 +12,11 @@ class RequestsMaker:
             return response.json()
         else:
             return None
+        
+    def send_post_request_json(self, endpoint, json=None, headers=None):
+        url = f"{self.base_url}/{endpoint}"
+        response = requests.post(url, json=json)
+        if response.status_code == 201:
+            return response.json()
+        else:
+            return None

@@ -1,3 +1,5 @@
 app/__pycache__
 app/__pycache__/*.pyc
 src/iam_server/node_modules
+src/iam_server/node_modules/*
+**/node_modules
