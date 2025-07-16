@@ -16,8 +16,8 @@ function authenticateToken(req, res, next) {
   jwt.verify(token, JWT_SECRET, (err, id) => {
     if (err)
     {
-      console.error('Token verification failed:', err.message);
-      return res.sendStatus(403);
+      //console.error('Token verification failed:', err.message);
+      return res.status(403).send("Invalid token!");
     }
     
     /*
@@ -45,7 +45,7 @@ function authorizeRoles(...allowedRoles) {
   //console.log('Allowed roles:', allowedRoles);
   return (req, res, next) => {
     if (!allowedRoles.includes(req.role)) {
-      return res.status(403).json({ message: 'Forbidden: insufficient rights' });
+      return res.status(403).send('Forbidden: insufficient rights');//json({ message: 'Forbidden: insufficient rights' });
     }
     next();
   };

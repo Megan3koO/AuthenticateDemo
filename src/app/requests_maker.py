@@ -9,14 +9,14 @@ class RequestsMaker:
         url = f"{self.base_url}/{endpoint}"
         response = requests.get(url, params=params, headers=headers)
         if response.status_code == 200:
-            return response.json()
+            return response.status_code, response.json()
         else:
-            return None
+            return response.status_code, {"error_message" : response.text}
         
     def send_post_request_json(self, endpoint, json=None, headers=None):
         url = f"{self.base_url}/{endpoint}"
         response = requests.post(url, json=json)
         if response.status_code == 201:
-            return response.json()
+            return response.status_code, response.json()
         else:
-            return None
+            return response.status_code, {"error_message" : response.text}

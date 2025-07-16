@@ -36,6 +36,8 @@ class LoginWindow(Window):
         self.name = 'login'
         self.result_label = None
         self.requests_maker = RequestsMaker()
+
+        self.password_entry = None
         super().__init__(master, controller)
 
     def create_widgets(self):
@@ -55,7 +57,7 @@ class LoginWindow(Window):
         username_entry = tk.Entry(username_panel, width=20, textvariable=self.username_input)
 
         password_label = tk.Label(password_panel, text="password: ")
-        password_entry = tk.Entry(password_panel, show='*', width=20, textvariable=self.password_input)
+        self.password_entry = tk.Entry(password_panel, show='*', width=20, textvariable=self.password_input)
 
         self.result_label = tk.Label(result_panel)
 
@@ -72,7 +74,7 @@ class LoginWindow(Window):
 
         password_panel.grid(row=1, column=0, sticky="nesw", padx=10, pady=10)
         password_label.grid(row=0, column=0, padx=10, pady=10)
-        password_entry.grid(row=0, column=1, padx=10, pady=10)
+        self.password_entry.grid(row=0, column=1, padx=10, pady=10)
 
         result_panel.grid(row=1, column=0, sticky="nesw", padx=10, pady=10)
         self.result_label.grid(row=0, column=0, padx=10, pady=10)
@@ -82,8 +84,11 @@ class LoginWindow(Window):
         register_button.grid(row=0, column=1, padx=5, pady=10)
         back_button.grid(row=0, column=2, padx=5, pady=10)
 
+        self.refresh()
+
     def refresh(self):
         self.result_label.config(text="")
+        self.password_entry.delete(0, tk.END)
 
     def register(self):
         username = self.username_input.get()
@@ -94,12 +99,12 @@ class LoginWindow(Window):
             return
         try: 
             headers = {"Content-Type" : "application/json"}
-            response = self.requests_maker.send_post_request_json(endpoint='register', json={"username" : username, "password" : password}, headers=headers)
-            if response:
+            status, response = self.requests_maker.send_post_request_json(endpoint='register', json={"username" : username, "password" : password}, headers=headers)
+            if status == 201:
                 message = response.get('message')
                 self.result_label.config(text=message, fg='green')
             else:
-                self.result_label.config(text="Register failed! Please check your information", fg='red')
+                self.result_label.config(text=f"Register failed! {response.get('error_message')}", fg='red')
         except requests.exceptions.RequestException as e:
             self.result_label.config(text=f"An error occurred: {e}", fg='red')
         
@@ -109,14 +114,14 @@ class LoginWindow(Window):
         
         try:
             headers = {"Content-Type" : "application/json", "username": username, "password": password}
-            response = self.requests_maker.send_get_request('login', headers=headers)
-            if response:
+            status, response = self.requests_maker.send_get_request('login', headers=headers)
+            if status == 200:
                 token = response.get('token')
                 self.controller.set_login_token(token)
                 self.controller.set_username(username)
                 self.controller.show_frame(ApiWindow)
             else:
-                self.result_label.config(text="Login failed! Please check your credentials.", fg='red')
+                self.result_label.config(text=f"Login failed! {response.get('error_message')}", fg='red')
         except requests.exceptions.RequestException as e:
             self.result_label.config(text=f"An error occurred: {e}", fg='red')
 
@@ -155,11 +160,11 @@ class ApiWindow(Window):
         headers = {'Authorization': f'Bearer {self.login_token}'}
         requests_maker = RequestsMaker()
         try:
-            response = requests_maker.send_get_request(endpoint=api_route, params={'username' : self.username}, headers=headers)
-            if response:
+            status, response = requests_maker.send_get_request(endpoint=api_route, params={'username' : self.username}, headers=headers)
+            if status == 200:
                 self.api_call_result_label.config(text=f"API call result: {response['message']}", fg='green')
             else:
-                self.api_call_result_label.config(text="Failed to retrieve data from API.", fg='red')
+                self.api_call_result_label.config(text=f"Failed to retrieve data from API: {response['error_message']}", fg='red')
         except requests.exceptions.RequestException as e:
             self.api_call_result_label.config(text=f"An error occurred: {e}", fg='red')
     
