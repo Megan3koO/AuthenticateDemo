@@ -13,6 +13,7 @@ app.use('/', require('./routes/hello'));
 app.use('/', require('./routes/login'));
 app.use('/', require('./routes/api'));
 app.use('/', require('./routes/register'));
+app.use('/', require('./routes/api_admin'));
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);

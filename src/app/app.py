@@ -1,5 +1,5 @@
 import tkinter as tk
-from frames import MainWindow, LoginWindow, ApiWindow
+from frames import MainWindow, LoginWindow, ApiWindow, RequestAccessWindow, InboxWindow
 
 class App(tk.Tk):
     def __init__(self):
@@ -11,12 +11,12 @@ class App(tk.Tk):
         #self.geometry("500x400")
         self.container = tk.Frame(self)
         self.container.pack(fill=tk.BOTH, expand=True)
+        self.windows = (MainWindow, LoginWindow, ApiWindow, RequestAccessWindow, InboxWindow)
 
         self.frames = {}
-        for F in (MainWindow, LoginWindow, ApiWindow):
+        for F in self.windows:
             frame = F(master=self.container, controller=self) #init custom frame
             self.frames[F.__name__] = frame #add frame to the dictionary
-            #frame.config(bg='white')  # Set background color for each frame
             frame.grid(row=0, column=0, sticky="nsew")
         
         self.show_frame(MainWindow)
@@ -27,9 +27,13 @@ class App(tk.Tk):
             if not self.login_token:
                 self.show_frame(LoginWindow)
                 return
-            frame.set_login_token(self.login_token)
             frame.set_username(self.username)
             self.after(60 * 1000 * self.api_timeout, lambda: self.redirect_to_main)  # Auto-redirect after 5 minutes
+        if frame_class.__name__ == 'RequestAccessWindow':
+            if not self.login_token:
+                self.show_frame(LoginWindow)
+                return
+        frame.set_login_token(self.login_token)
         frame.refresh()
         frame.tkraise()
 

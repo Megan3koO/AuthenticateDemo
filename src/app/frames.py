@@ -9,6 +9,7 @@ class Window(tk.Frame):
         self.create_widgets()
         self.pack_widgets()
         self.controller = controller
+        self.login_token = None
 
     def create_widgets(self):
         pass
@@ -18,6 +19,9 @@ class Window(tk.Frame):
 
     def refresh(self):
         pass
+    
+    def set_login_token(self, token):
+        self.login_token = token
 
 
 class MainWindow(Window):
@@ -196,9 +200,10 @@ class ApiWindow(Window):
         back_button = tk.Button(navigation_panel, text="Back", width=10, command=lambda: self.controller.show_frame(LoginWindow))
         quit_button = tk.Button(navigation_panel, text="Quit", width=10, command=self.master.quit)
         
-        api_button = tk.Button(api_panel, text="Show Token", width=10, command=self.show_token)
+        request_button = tk.Button(api_panel, text="Request Access", width=10, command=lambda: self.controller.show_frame(RequestAccessWindow))
+        inbox_button = tk.Button(api_panel, text="Inbox", width=10, command=lambda: self.controller.show_frame(InboxWindow))
         api_button1 = tk.Button(api_panel, text="Call API", width=10, command=lambda: self.call_api('api'))
-        api_button2 = tk.Button(api_panel, text="Call API Admin", width=10, command=lambda: self.call_api('api/admin'))
+        api_button2 = tk.Button(api_panel, text="Call API Admin", width=10, command=lambda: self.call_api('admin/api'))
 
         #set up main panel
         #pack the biggest frame, then add and grid the child, using grid to set the layout. Start from the parent to the child
@@ -220,13 +225,177 @@ class ApiWindow(Window):
         api_label.grid(row=0, column=0, padx=10, pady=10)
         api_panel.grid(row=1, column=0, padx=10, pady=10)
 
-        api_button.grid(row=0, column=0, padx=10, pady=10)
-        api_button1.grid(row=1, column=0, padx=10, pady=10)
-        api_button2.grid(row=2, column=0, padx=10, pady=10)
+        api_button1.grid(row=0, column=0, padx=10, pady=10)
+        api_button2.grid(row=1, column=0, padx=10, pady=10)
+        request_button.grid(row=2, column=0, padx=10, pady=10)
+        inbox_button.grid(row=3, column=0, padx=10, pady=10)
 
         #set up navigation panel
         navigation_panel.grid(row=2, column=0, sticky="nesw", padx=10, pady=10)
         back_button.grid(row=0, column=0, padx=10, pady=10)
         quit_button.grid(row=0, column=1, padx=10, pady=10)
 
+class RequestAccessWindow(Window):
+    def __init__(self, master=None, controller=None):
+        self.name = 'request-access'
+        self.approver_input = None
+        self.role_input = None
+        self.result_label = None
+        self.login_token = None
+        super().__init__(master, controller)
+    
+    def create_widgets(self):
+        self.main_panel = tk.Frame(self)
 
+        header_panel = tk.Frame(self.main_panel)
+        input_panel = tk.Frame(self.main_panel)
+        result_panel = tk.Frame(self.main_panel)
+        navigation_panel = tk.Frame(self.main_panel)
+
+        header_label = tk.Label(header_panel, text="Request Access")
+
+        approver_panel = tk.Frame(input_panel)
+        role_panel = tk.Frame(input_panel)
+
+        self.approver_input = tk.StringVar()
+        self.role_input = tk.StringVar()
+
+        approver_label = tk.Label(approver_panel, text="approver: ")
+        approver_entry = tk.Entry(approver_panel, width=20, textvariable=self.approver_input)
+
+        role_label = tk.Label(role_panel, text="role:     ")
+        role_entry = tk.Entry(role_panel, width=20, textvariable=self.role_input)
+
+        self.result_label = tk.Label(result_panel)
+
+        send_request_button = tk.Button(navigation_panel, text="Send Request", width=10, command=self.send)
+        back_button = tk.Button(navigation_panel, text="Back", width=10, command=lambda: self.controller.show_frame(ApiWindow))
+
+        #set up main panel
+        self.main_panel.pack(fill=tk.BOTH, expand=True)
+
+        header_panel.grid(row = 0, column = 0, padx = 10, pady = 10)
+        header_label.grid(row = 0, column = 0, padx = 10, pady = 10)
+
+        input_panel.grid(row=1, column=0, padx=10, pady=10)
+
+        approver_panel.grid(row=0, column=0, padx=10, pady=10)
+        approver_label.grid(row=0, column=0, padx=10, pady=10)
+        approver_entry.grid(row=0, column=1, padx=10, pady=10)
+
+        role_panel.grid(row=1, column=0, padx=10, pady=10)
+        role_label.grid(row=0, column=0, padx=10, pady=10)
+        role_entry.grid(row=0, column=1, padx=10, pady=10)
+
+        result_panel.grid(row=2, column=0, padx=10, pady=10)
+        self.result_label.grid(row=0, column=0)
+
+        navigation_panel.grid(row=3, column=0, padx=10, pady=10)
+        send_request_button.grid(row=0, column=0, padx=10, pady=10)
+        back_button.grid(row=0, column=1, padx=10, pady=10)
+        
+    def set_login_token(self, token):
+        self.login_token = token
+
+    def refresh(self):
+        self.result_label.config(text="")
+
+    def send(self):
+        if not self.login_token:
+            print("You need to log in first!")
+            self.controller.show_frame(LoginWindow)
+            return
+        
+        approver = self.approver_input.get()
+        role = self.role_input.get()
+
+        requests_maker = RequestsMaker()
+
+        data = {
+            "token" : self.login_token,
+            "approver" : approver,
+            "request_role" : role 
+        }
+
+        try:
+            status, response = requests_maker.send_post_request_json(endpoint='api/request-access', json=data)
+            if status == 201:
+                self.result_label.config(text=f"API call result: {response['message']}", fg='green')
+            else:
+                self.result_label.config(text=f"Failed to retrieve data from API: {response['error_message']}", fg='red')
+        except requests.exceptions.RequestException as e:
+            self.result_label.config(text=f"An error occurred: {e}", fg='red')
+
+class InboxItem(tk.Button):
+    def __init__(self):
+        super().__init__()
+    
+
+class InboxWindow(Window):
+    def __init__(self, master=None, controller = None):
+        self.content_panel = None
+        self.pending_requests = []
+        super().__init__(master, controller)
+    
+    def fetch_pending_requests(self):
+        if not self.login_token: #or expired
+            print("You need to log in first!")
+            self.controller.show_frame(LoginWindow)
+            return
+
+        headers = {'Authorization': f'Bearer {self.login_token}'}
+        self.pending_requests = []
+        request_maker = RequestsMaker()
+        try:
+            status, response = request_maker.send_get_request(endpoint='api/pending-request', headers=headers)
+            if status == 200:
+                for item in response['message']:
+                    self.pending_requests.append(item)
+                self.result_label.config(text=f"API call success", fg='green')
+            else:
+                self.result_label.config(text=f"Failed to retrieve data from API: {response['error_message']}", fg='red')
+        except requests.exceptions.RequestException as e:
+            self.result_label.config(text=f"An error occurred: {e}", fg='red')
+
+    def refresh(self):
+        self.fetch_pending_requests()
+        for request in self.pending_requests:
+            tk.Button(self.content_panel, text=request['_id']).pack(expand=True, fill=tk.X)
+
+    def create_widgets(self):
+        self.main_panel = tk.Frame(self)
+
+        header_panel = tk.Frame(self.main_panel)
+        self.content_panel = tk.Frame(self.main_panel, bg='white', height=200)
+        navigation_panel = tk.Frame(self.main_panel)
+        result_panel = tk.Frame(self.main_panel)
+        
+        welcome_label = tk.Label(header_panel, text="Pending Requests")
+        self.result_label = tk.Label(result_panel, text="", fg='black')
+       
+
+        approve_button = tk.Button(navigation_panel, text="Approve", width=10)
+        reject_button = tk.Button(navigation_panel, text="Reject", width=10)
+        back_button = tk.Button(navigation_panel, text="Back", width=10, command=lambda: self.controller.show_frame(ApiWindow))
+
+        #set up main panel
+        #pack the biggest frame, then add and grid the child, using grid to set the layout. Start from the parent to the child
+        #handle layour more easily
+        self.main_panel.pack(fill=tk.BOTH, expand=True)
+        
+        header_panel.grid(row=0, column=0, sticky="nesw", padx=10, pady=10)
+        welcome_label.grid(row=0, column=0, padx=10, pady=10)
+        
+        #set up content panel
+        self.content_panel.grid(row=1, column=0, sticky="nesw", padx=10, pady=10)
+
+        result_panel.grid(row=2, column=0, sticky="nesw", padx=10, pady=10)
+        self.result_label.grid(row=0, column=0, sticky="nesw", padx=10, pady=10)
+        #set up navigation panel
+        navigation_panel.grid(row=3, column=0, sticky="nesw", padx=10, pady=10)
+        back_button.grid(row=0, column=3, padx=10, pady=10)
+        approve_button.grid(row=0, column=1, padx=10, pady=10)
+        reject_button.grid(row=0, column=2, padx=10, pady=10)
+    
+
+    
