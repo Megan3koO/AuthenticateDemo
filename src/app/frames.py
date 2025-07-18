@@ -10,6 +10,7 @@ class Window(tk.Frame):
         self.pack_widgets()
         self.controller = controller
         self.login_token = None
+        self.headers = None
 
     def create_widgets(self):
         pass
@@ -335,6 +336,8 @@ class InboxWindow(Window):
     def __init__(self, master=None, controller = None):
         self.content_panel = None
         self.pending_requests = []
+        self.inbox_items = []
+        self.result_label = None
         super().__init__(master, controller)
     
     def fetch_pending_requests(self):
@@ -357,11 +360,48 @@ class InboxWindow(Window):
         except requests.exceptions.RequestException as e:
             self.result_label.config(text=f"An error occurred: {e}", fg='red')
 
-    def refresh(self):
-        self.fetch_pending_requests()
-        for request in self.pending_requests:
-            tk.Button(self.content_panel, text=request['_id']).pack(expand=True, fill=tk.X)
+    def on_inbox_item_click(self):
+        pass
 
+    def on_reject(self, request):
+        self.result_label.config(text=f"Not yet implemented!", fg='black')
+
+    def on_approve(self, request):
+        if not self.login_token: #or expired
+            print("You need to log in first!")
+            self.controller.show_frame(LoginWindow)
+            return
+
+        headers = {'Authorization': f'Bearer {self.login_token}'}
+        request_maker = RequestsMaker()
+        try:
+            status, response = request_maker.send_post_request_json(endpoint='admin/approve-request', json=request, headers=headers)
+            if status == 201:
+                self.refresh()
+                self.result_label.config(text=f"{response['message']}", fg='green')
+            else:
+                self.result_label.config(text=f"Failed to approve request id {request['_id']}. Error: {response['error_message']}", fg='red')
+        except requests.exceptions.RequestException as e:
+            self.result_label.config(text=f"An error occurred: {e}", fg='red')
+
+    def refresh(self):
+        self.result_label.config(text="")
+        for widget in self.content_panel.winfo_children():
+            widget.destroy()
+        self.fetch_pending_requests()
+        id = 0
+        for request in self.pending_requests:
+            mail_panel = tk.Frame(self.content_panel)
+            mail_button = tk.Button(mail_panel, text=request['_id'], width=20, command=self.on_inbox_item_click)
+            approve_button = tk.Button(mail_panel, text='Approve', command=lambda: self.on_approve(request))
+            reject_button = tk.Button(mail_panel, text='Reject', command=lambda: self.on_reject(request))
+
+            mail_panel.pack(expand=True, fill=tk.X)
+            mail_button.grid(row=0, column=0)
+            approve_button.grid(row=0, column=1)
+            reject_button.grid(row=0, column=2)
+            id+=1
+            
     def create_widgets(self):
         self.main_panel = tk.Frame(self)
 
@@ -373,9 +413,6 @@ class InboxWindow(Window):
         welcome_label = tk.Label(header_panel, text="Pending Requests")
         self.result_label = tk.Label(result_panel, text="", fg='black')
        
-
-        approve_button = tk.Button(navigation_panel, text="Approve", width=10)
-        reject_button = tk.Button(navigation_panel, text="Reject", width=10)
         back_button = tk.Button(navigation_panel, text="Back", width=10, command=lambda: self.controller.show_frame(ApiWindow))
 
         #set up main panel
@@ -393,9 +430,7 @@ class InboxWindow(Window):
         self.result_label.grid(row=0, column=0, sticky="nesw", padx=10, pady=10)
         #set up navigation panel
         navigation_panel.grid(row=3, column=0, sticky="nesw", padx=10, pady=10)
-        back_button.grid(row=0, column=3, padx=10, pady=10)
-        approve_button.grid(row=0, column=1, padx=10, pady=10)
-        reject_button.grid(row=0, column=2, padx=10, pady=10)
+        back_button.grid(row=0, column=0, padx=10, pady=10)
     
 
     

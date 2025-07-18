@@ -30,7 +30,7 @@ router.post('/api/request-access', async (req, res) => {
       "request_role" : requesting_role
     }
   };
-  console.log(requestData);
+
   try{
     result = Request.create(requestData);
   }
@@ -49,9 +49,7 @@ router.get('/api/pending-request', async (req, res) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader?.split(' ')[1];
 
-  console.log(token);
   const decoded = jwt.decode(token, JWT_SECRET);
-  console.log(decoded);
 
   const username = decoded['id'];
   requests = undefined

@@ -8,11 +8,10 @@ function authenticateUser(req, res, next) {
 
 // Middleware to verify token
 function authenticateToken(req, res, next) {
-  //console.log(req.headers)
   const authHeader = req.headers['authorization'];
   const token = authHeader?.split(' ')[1];
 
-  if (!token) return res.sendStatus(401);
+  if (!token) return res.status(401).send("Missing token!");
   jwt.verify(token, JWT_SECRET, (err, id) => {
     if (err)
     {

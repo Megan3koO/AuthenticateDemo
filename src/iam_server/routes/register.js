@@ -19,7 +19,6 @@ router.post('/register', async (req, res) => {
 
     //Should use bcrypt or similar for password hashing in real apps
     hashedPassword = bcrypt.hashSync(req.body.password, BCRYPT_SECRET);
-    console.log('Hashed password:', hashedPassword);
 
     const userData = {
         "username" : req.body.username,
