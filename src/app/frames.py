@@ -6,11 +6,11 @@ class Window(tk.Frame):
     def __init__(self, master=None, controller=None):
         super().__init__(master)
         self.master = master
-        self.create_widgets()
-        self.pack_widgets()
         self.controller = controller
         self.login_token = None
         self.headers = None
+        self.create_widgets()
+        self.pack_widgets()
 
     def create_widgets(self):
         pass
@@ -243,8 +243,33 @@ class RequestAccessWindow(Window):
         self.role_input = None
         self.result_label = None
         self.login_token = None
+        self.approver_entry = None
+        self.approver_panel = None
         super().__init__(master, controller)
     
+    def fetch_valid_approvers(self):
+        approvers = []
+
+        if not self.login_token: #or expired
+            print("You need to log in first!")
+            return ['emptry']
+
+        headers = {'Authorization': f'Bearer {self.login_token}'}
+        self.pending_requests = []
+        request_maker = RequestsMaker()
+        try:
+            status, response = request_maker.send_get_request(endpoint='api/fetch-approvers', headers=headers)
+            if status == 200:
+                for item in response['message']:
+                    approvers.append(item)
+                self.result_label.config(text=f"API call success", fg='green')
+            else:
+                self.result_label.config(text=f"Failed to retrieve data from API: {response['error_message']}", fg='red')
+        except requests.exceptions.RequestException as e:
+            self.result_label.config(text=f"An error occurred: {e}", fg='red')
+        
+        return approvers
+
     def create_widgets(self):
         self.main_panel = tk.Frame(self)
 
@@ -255,17 +280,19 @@ class RequestAccessWindow(Window):
 
         header_label = tk.Label(header_panel, text="Request Access")
 
-        approver_panel = tk.Frame(input_panel)
+        self.approver_panel = tk.Frame(input_panel)
         role_panel = tk.Frame(input_panel)
 
         self.approver_input = tk.StringVar()
         self.role_input = tk.StringVar()
 
-        approver_label = tk.Label(approver_panel, text="approver: ")
-        approver_entry = tk.Entry(approver_panel, width=20, textvariable=self.approver_input)
+        approver_label = tk.Label(self.approver_panel, text="Approver: ", width=10)
+        #approver_entry = tk.Entry(approver_panel, width=20, textvariable=self.approver_input)
+        self.approver_entry = tk.OptionMenu(self.approver_panel, self.approver_input, ['empty'])
 
-        role_label = tk.Label(role_panel, text="role:     ")
-        role_entry = tk.Entry(role_panel, width=20, textvariable=self.role_input)
+        role_label = tk.Label(role_panel, text="Role: ", width=10)
+        #role_entry = tk.Entry(role_panel, width=20, textvariable=self.role_input)
+        role_entry = tk.OptionMenu(role_panel, self.role_input, *["admin", "user", "editor"])
 
         self.result_label = tk.Label(result_panel)
 
@@ -280,9 +307,9 @@ class RequestAccessWindow(Window):
 
         input_panel.grid(row=1, column=0, padx=10, pady=10)
 
-        approver_panel.grid(row=0, column=0, padx=10, pady=10)
+        self.approver_panel.grid(row=0, column=0, padx=10, pady=10)
         approver_label.grid(row=0, column=0, padx=10, pady=10)
-        approver_entry.grid(row=0, column=1, padx=10, pady=10)
+        self.approver_entry.grid(row=0, column=1, padx=10, pady=10)
 
         role_panel.grid(row=1, column=0, padx=10, pady=10)
         role_label.grid(row=0, column=0, padx=10, pady=10)
@@ -300,6 +327,14 @@ class RequestAccessWindow(Window):
 
     def refresh(self):
         self.result_label.config(text="")
+        approver_list = self.fetch_valid_approvers()
+        menu = self.approver_entry["menu"]
+        menu.delete(0, tk.END)
+        for item in approver_list:
+            text = dict(item)['approver']
+            menu.add_command(label=text, command=lambda value=text: self.approver_input.set(value))
+        self.approver_input.set("<Select approver>")
+        self.role_input.set("<Select role>")
 
     def send(self):
         if not self.login_token:

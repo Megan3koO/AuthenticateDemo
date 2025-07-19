@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const {authenticateToken, authorizeRoles} = require('../controllers/auth');
 
-const JWT_SECRET = require('../models/secrets').JWT_KEY
+const JWT_SECRET = require('../models/secrets').JWT_KEY;
 const jwt = require('jsonwebtoken')
 const Request = require('../models/request')
+const User = require('../models/user');
 
 router.get('/api', (req, res) => {
     res.status(200).json({'message': 'Hello, World!'});
@@ -63,6 +64,27 @@ router.get('/api/pending-request', async (req, res) => {
     return res.status(403).send('Error getting requests');
   }
   return res.status(200).json({'message': requests});
+});
+
+router.get('/api/fetch-approvers', async (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader?.split(' ')[1];
+  result = [];
+  requests = undefined
+  try
+  {
+    const approvers = await User.find({role : 'admin'});
+    for (let i=0; i<approvers.length; i++)
+    {
+      result.push({"approver" : approvers[i].get('username')});
+    }
+  }
+  catch (error)
+  {
+    console.log('Error: ', error);
+    return res.status(403).send('Error getting requests');
+  }
+  return res.status(200).json({'message': result});
 });
 
 module.exports = router;
